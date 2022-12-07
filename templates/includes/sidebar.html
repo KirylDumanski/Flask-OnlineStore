@@ -1,0 +1,11 @@
+<div class="d-flex flex-column flex-shrink-0 p-3 bg-light" style="width: 200px;">
+  <h4 class="text-center">Categories</h4>
+  <hr>
+  <ul class="nav nav-pills flex-column mb-auto">
+    <li class="nav-item"><a href="{{url_for('index')}}" class="nav-link link-dark">All products</a></li>
+    {%for category in sidebar_categories%}
+    <li><a href="{{url_for('index', category_slug=category.slug)}}" class="nav-link link-dark">{{category.name}}</a></li>
+    {%endfor%}
+  </ul>
+  <hr>
+</div>

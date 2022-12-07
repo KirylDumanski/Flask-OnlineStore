@@ -56,6 +56,11 @@ class Category(db.Model):
         return f"{self.name}"
 
 
+@app.context_processor
+def inject_sidebar():
+    return dict(sidebar_categories=Category.query.order_by(Category.name))
+
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(50), unique=True)
