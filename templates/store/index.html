@@ -10,7 +10,11 @@
   <div style="display: flex; flex-direction: row; flex-wrap: wrap">
     {% for product in products %}
     <div class="card" style="width: 18rem; margin: 10px;">
-      <img src="">
+      {%if product.picture%}
+        <img src="{{url_for('static', filename='images')}}/{{product.picture}}" style="height: 286px;">
+      {%else%}
+        <img src="{{url_for('static', filename='placeholder/img_placeholder.png')}}">
+      {%endif%}
       <div class="card-body">
         <h5 class="card-title">{{ product.title }}</h5>
         <small class="card-text">
@@ -18,8 +22,15 @@
           <a href="{{url_for('index', category_slug=product.category.slug)}}">{{product.category.name}}</a>
         </small>
         <p class="card-text mt-2">{{product.description}}</p>
-        <small class="card-text">Quantity: {{product.quantity}}</small>
-        <p class="card-text text-end">${{ product.price/100 }}</p>
+        <div class="row">
+          <div class="col">
+            <p class="card-text">Quantity: {{product.quantity}}</p>
+          </div>
+          <div class="col">
+            <h5 class="card-text text-end">${{ product.price/100 }}</h5>
+          </div>
+        </div>
+        <br>
         <a href="#" class="btn btn-primary">More</a>
       </div>
     </div>

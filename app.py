@@ -1,12 +1,14 @@
 import os
+import uuid
 from datetime import datetime
 
-from flask import Flask, render_template, flash
+from flask import Flask, render_template, flash, request
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from slugify import slugify
-from wtforms import SubmitField, StringField, IntegerField, BooleanField, TextAreaField
+from werkzeug.utils import secure_filename
+from wtforms import SubmitField, StringField, IntegerField, BooleanField, TextAreaField, FileField
 from wtforms.validators import DataRequired
 from wtforms_alchemy import QuerySelectField
 
@@ -15,6 +17,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'DEVELOPMENT'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'store.db')
+app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static\\images\\')
 db = SQLAlchemy(app)
 
 
@@ -27,6 +30,7 @@ class Product(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
     quantity = db.Column(db.Integer, nullable=False)
     active = db.Column(db.Boolean, default=True)
+    picture = db.Column(db.String(), nullable=True)
 
     def __init__(self, *args, **kwargs):
         if 'slug' not in kwargs:
@@ -72,7 +76,8 @@ class ProductForm(FlaskForm):
                                    query_factory=lambda: Category.query.all(),
                                    validators=[DataRequired()])
     quantity = IntegerField("Quantity: ", validators=[DataRequired()])
-    active = BooleanField("Active")
+    active = BooleanField("Active", default=True)
+    picture = FileField("Product picture: ")
     submit = SubmitField("Add product")
 
 
@@ -84,12 +89,12 @@ class CategoryForm(FlaskForm):
 @app.route('/category/<string:category_slug>')
 @app.route('/')
 def index(category_slug=None):
-    products = Product.query.all()
+    products = Product.query.filter(Product.active == 1)
     if category_slug:
         try:
-            products = Product.query.join(Category).filter(Category.slug == category_slug)
+            products = Product.query.filter(Product.active == 1).join(Category).filter(Category.slug == category_slug)
             if products.first():
-                return render_template('store/index.html', products=products)
+                return render_template('store/index.html', products=products, category=products.first().category.name)
             return render_template('store/index.html', empty_query=True)
         except Exception as e:
             print(e)
@@ -101,12 +106,19 @@ def add_product():
     form = ProductForm()
     if form.validate_on_submit():
         try:
+            if request.files['picture'].filename:
+                loaded_picture_name = secure_filename(request.files['picture'].filename)
+                picture_name_to_save = str(uuid.uuid1()) + "_" + loaded_picture_name
+                form.picture.data.save(os.path.join(app.config['UPLOAD_FOLDER'], picture_name_to_save))
+            else:
+                picture_name_to_save = None
             product = Product(title=form.title.data,
                               description=form.description.data,
                               price=form.price.data,
                               category_id=int(form.category_id.raw_data[0]),
                               quantity=form.quantity.data,
-                              active=form.active.data)
+                              active=form.active.data,
+                              picture=picture_name_to_save)
             db.session.add(product)
             db.session.commit()
             flash('Product added successfully!')

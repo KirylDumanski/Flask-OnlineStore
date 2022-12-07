@@ -14,7 +14,7 @@
   </ul>
   {% endif %}
   {% endwith %}
-  <form action="" method="post">
+  <form action="" method="post" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     {%for field in form if field.name not in ['csrf_token', 'submit', 'active', 'category_id']%}
     <p>
@@ -34,14 +34,13 @@
     <p>
       <label for="category_id">Category: </label>
       <select id="{{ form.category_id.id }}" name="{{ form.category_id.name }}" class="form-control">
-      <option value="" disabled selected>---Select product category---</option>
-      {% for option in form.category_id %}
+        <option value="" disabled selected>---Select product category---</option>
+        {% for option in form.category_id %}
           {{ option }}
-      {% endfor %}
-    </select>
+        {% endfor %}
+      </select>
       <small><a href="{{url_for('add_category')}}">Add category</a></small>
     </p>
-
     <p>{{form.active}} {{form.active.label}}</p>
     <p class="text-end">{{form.submit(class_='btn btn-primary')}}</p>
   </form>
