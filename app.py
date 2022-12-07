@@ -40,7 +40,13 @@ class Product(db.Model):
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
-    product_id = db.relationship('Product', backref='product_category')
+    slug = db.Column(db.String(200), index=True, unique=True)
+    product_id = db.relationship('Product', backref='category')
+
+    def __init__(self, *args, **kwargs):
+        if 'slug' not in kwargs:
+            kwargs['slug'] = slugify(kwargs.get('name', ''))
+        super().__init__(*args, **kwargs)
 
     def __repr__(self):
         return f"{self.name}"
@@ -75,14 +81,19 @@ class CategoryForm(FlaskForm):
     submit = SubmitField("Add category")
 
 
+@app.route('/category/<string:category_slug>')
 @app.route('/')
-def index():
-    return render_template('store/index.html')
-
-
-@app.route('/about')
-def about():
-    return render_template('store/about.html')
+def index(category_slug=None):
+    products = Product.query.all()
+    if category_slug:
+        try:
+            products = Product.query.join(Category).filter(Category.slug == category_slug)
+            if products.first():
+                return render_template('store/index.html', products=products)
+            return render_template('store/index.html', empty_query=True)
+        except Exception as e:
+            print(e)
+    return render_template('store/index.html', products=products)
 
 
 @app.route('/product/add', methods=["GET", "POST"])
@@ -122,6 +133,11 @@ def add_category():
             print(e)
 
     return render_template('store/add_category.html', form=form)
+
+
+@app.route('/about')
+def about():
+    return render_template('store/about.html')
 
 
 if __name__ == '__main__':

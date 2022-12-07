@@ -4,7 +4,27 @@
 
 {%block content%}
 <div class="container">
-
+  {%if empty_query%}
+    <h3>No products found for the specified category. Go to <a href="{{url_for('index')}}">main page</a></h3>
+  {%endif%}
+  <div style="display: flex; flex-direction: row; flex-wrap: wrap">
+    {% for product in products %}
+    <div class="card" style="width: 18rem; margin: 10px;">
+      <img src="">
+      <div class="card-body">
+        <h5 class="card-title">{{ product.title }}</h5>
+        <small class="card-text">
+          Category:
+          <a href="{{url_for('index', category_slug=product.category.slug)}}">{{product.category.name}}</a>
+        </small>
+        <p class="card-text mt-2">{{product.description}}</p>
+        <small class="card-text">Quantity: {{product.quantity}}</small>
+        <p class="card-text text-end">${{ product.price/100 }}</p>
+        <a href="#" class="btn btn-primary">More</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 
 {%endblock%}
