@@ -30,13 +30,27 @@
           </ul>
         </li>
       </ul>
-      <form class="d-flex">
-        <button class="btn btn-outline-dark" type="submit">
-          <i class="bi-cart-fill me-1"></i>
-          Cart
-          <span class="badge bg-dark text-white ms-1 rounded-pill">0</span>
-        </button>
-      </form>
+    </div>
+    <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <form>
+            <button class="btn btn-outline-dark" type="submit">
+              <i class="bi-cart-fill me-1"></i>
+              Cart
+              <span class="badge bg-dark text-white ms-1 rounded-pill">0</span>
+            </button>
+          </form>
+        </li>
+        {%if current_user.is_authenticated%}
+          <li class="nav-item"><a class="nav-link">Hi, {{current_user.first_name}} {{current_user.last_name}}</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('logout')}}">Logout</a></li>
+        {%else%}
+        <li class="nav-item"><a class="nav-link" href="{{url_for('login')}}">Login</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{url_for('register')}}">Register</a></li>
+        {%endif%}
+      </ul>
     </div>
   </div>
+
 </nav>

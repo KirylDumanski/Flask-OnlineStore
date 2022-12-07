@@ -2,14 +2,16 @@ import os
 import uuid
 from datetime import datetime
 
-from flask import Flask, render_template, flash, request
-from flask_login import UserMixin
+from flask import Flask, render_template, flash, request, redirect, url_for
+from flask_login import UserMixin, LoginManager, current_user, login_user, login_required, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from slugify import slugify
+from sqlalchemy.exc import NoResultFound
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from wtforms import SubmitField, StringField, IntegerField, BooleanField, TextAreaField, FileField
-from wtforms.validators import DataRequired
+from wtforms import SubmitField, StringField, IntegerField, BooleanField, TextAreaField, FileField, PasswordField
+from wtforms.validators import DataRequired, Email, Length, EqualTo
 from wtforms_alchemy import QuerySelectField
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -18,6 +20,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'DEVELOPMENT'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'store.db')
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static\\images\\')
+login_manager = LoginManager(app)
 db = SQLAlchemy(app)
 
 
@@ -71,6 +74,28 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<User {self.id} - {self.first_name} {self.last_name}>"
+
+
+@login_manager.user_loader
+def user_loader(user_id):
+    return User.query.get(user_id)
+
+
+class RegisterForm(FlaskForm):
+    first_name = StringField("First name: ", validators=[DataRequired()])
+    last_name = StringField("Last name: ", validators=[DataRequired()])
+    email = StringField("Email: ", validators=[Email(), DataRequired()])
+    password1 = PasswordField("Password: ", validators=[DataRequired(), Length(min=4, max=100)])
+    password2 = PasswordField("Confirm password: ",
+                              validators=[DataRequired(), EqualTo('password1', message='Passwords do not match.')])
+    submit = SubmitField("Register")
+
+
+class LoginForm(FlaskForm):
+    email = StringField("Email: ", validators=[Email()])
+    password = PasswordField("Password: ", validators=[DataRequired(), Length(min=4, max=100)])
+    remember = BooleanField("Remember me", default=False)
+    submit = SubmitField("Login")
 
 
 class ProductForm(FlaskForm):
@@ -155,6 +180,59 @@ def add_category():
 @app.route('/about')
 def about():
     return render_template('store/about.html')
+
+
+@app.route('/register', methods=["GET", "POST"])
+def register():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        try:
+            password_hash = generate_password_hash(form.password1.data)
+            user = User(email=form.email.data,  # type: ignore
+                        password=password_hash,  # type: ignore
+                        first_name=form.first_name.data,  # type: ignore
+                        last_name=form.last_name.data)  # type: ignore
+            db.session.add(user)
+            db.session.commit()
+            flash("You have successfully registered!", category='success')
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            db.session.rollback()
+            print(e)
+            flash("Registration error", category='error')
+
+    return render_template('auth/register.html', title='Register', form=form)
+
+
+@app.route("/login", methods=["POST", "GET"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    form = LoginForm()
+    if form.validate_on_submit():
+        try:
+            user = User.query.filter_by(email=form.email.data).one()
+            if user and check_password_hash(user.password, form.password.data):
+                rm = form.remember.data
+                login_user(user, remember=rm)
+                return redirect(request.args.get('next') or url_for('index'))
+            else:
+                flash('Incorrect username and/or password entered', category='error')
+        except NoResultFound:
+            flash('Incorrect username and/or password entered', category='error')
+
+    return render_template('auth/login.html', title='Authorization', form=form)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Logout the current user."""
+    logout_user()
+    flash('Logged out successfully', category='success')
+    return redirect(url_for('index'))
 
 
 if __name__ == '__main__':
