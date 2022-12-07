@@ -1,0 +1,37 @@
+{%extends 'base.html'%}
+
+{%block title%}Online Store{%endblock%}
+
+{%block content%}
+<div class="container justify-content-md-center col-4">
+  <h1>Add category</h1>
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <ul class=flashes>
+    {% for message in messages %}
+    <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endwith %}
+
+  <form action="" method="post">
+    {{ form.hidden_tag() }}
+    <p>
+      <label for="{{form.name.id}}">{{form.name.label}}</label>
+      {%if form.name.errors%}
+      {{form.name(class="form-control is-invalid")}}
+      <span class="invalid-feedback">
+          {%for error in form.errors%}
+            {{error}}
+          {%endfor%}
+        </span>
+      {%else%}
+      {{form.name(class="form-control")}}
+      {%endif%}
+    </p>
+    <p class="text-end">{{form.submit(class_='btn btn-primary')}}</p>
+  </form>
+</div>
+
+{%endblock%}
