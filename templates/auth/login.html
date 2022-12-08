@@ -6,10 +6,12 @@
 {%block content%}
 
 <div class="container col-5">
-  <h1>Login form:</h1>
   {%for category, message in get_flashed_messages(True)%}
-  <div class="flash {{category}}">{{message}}</div>
+  <div class="alert alert-success" role="alert">
+    {{message}}
+  </div>
   {%endfor%}
+  <h1>Login:</h1>
   <form action="" method="post">
     {{form.hidden_tag()}}
     <p>

@@ -217,7 +217,8 @@ def login():
             if user and check_password_hash(user.password, form.password.data):
                 rm = form.remember.data
                 login_user(user, remember=rm)
-                return redirect(request.args.get('next') or url_for('index'))
+                flash("Logged in successfully")
+                return redirect(request.args.get('next') or url_for('dashboard'))
             else:
                 flash('Incorrect username and/or password entered', category='error')
         except NoResultFound:
@@ -232,7 +233,36 @@ def logout():
     """Logout the current user."""
     logout_user()
     flash('Logged out successfully', category='success')
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
+
+
+@app.route('/dashboard', methods=["GET", "POST"])
+@login_required
+def dashboard():
+    form = RegisterForm()
+    user_id = current_user.id
+    user_to_update = User.query.get_or_404(user_id)
+    if request.method == 'POST':
+        user_to_update.first_name = form.first_name.data
+        user_to_update.last_name = form.last_name.data
+        user_to_update.email = form.email.data
+        try:
+            db.session.commit()
+            flash('User updated successfully')
+            return render_template('auth/dashboard.html',
+                                   form=form,
+                                   user_to_update=user_to_update)
+        except Exception as e:
+            print(e)
+            flash('Error! Looks like there was a problem... try again!')
+            return render_template('auth/dashboard.html',
+                                   form=form,
+                                   user_to_update=user_to_update)
+
+    return render_template('auth/dashboard.html',
+                           form=form,
+                           user_to_update=user_to_update,
+                           user_id=user_id)
 
 
 if __name__ == '__main__':
