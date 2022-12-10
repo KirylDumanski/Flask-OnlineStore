@@ -8,15 +8,15 @@
   <div class="flash {{category}}">{{message}}</div>
   {%endfor%}
   {%if empty_query%}
-    <h3>No products found for the specified category. Go to <a href="{{url_for('index')}}">main page</a></h3>
+  <h3>No products found for the specified category. Go to <a href="{{url_for('index')}}">main page</a></h3>
   {%endif%}
   <div style="display: flex; flex-direction: row; flex-wrap: wrap">
     {% for product in products %}
     <div class="card" style="width: 18rem; margin: 10px;">
       {%if product.picture%}
-        <img src="{{url_for('static', filename='images')}}/{{product.picture}}" style="height: 286px;">
+      <img src="{{url_for('static', filename='images')}}/{{product.picture}}" style="height: 286px; width: 286px;">
       {%else%}
-        <img src="{{url_for('static', filename='placeholder/img_placeholder.png')}}">
+      <img src="{{url_for('static', filename='placeholder/img_placeholder.png')}}">
       {%endif%}
       <div class="card-body">
         <h5 class="card-title">{{ product.title }}</h5>
@@ -34,7 +34,13 @@
           </div>
         </div>
         <br>
-        <a href="#" class="btn btn-primary">More</a>
+        <form action="{{url_for('cart_add')}}" method="post">
+          {{form.hidden_tag()}}
+          <input type="hidden" name="product_id" value={{product.id}}>
+          <input type="hidden" name="update_quantity" value="">
+          {{form.quantity}}
+          {{form.submit(class="btn btn-primary btn-sm")}}
+        </form>
       </div>
     </div>
     {% endfor %}
