@@ -44,7 +44,7 @@ class Product(db.Model):
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        return f"<Product {self.id} - {self.title}"
+        return f"<Product {self.id} - {self.title}>"
 
 
 class Category(db.Model):
@@ -59,7 +59,7 @@ class Category(db.Model):
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        return f"{self.name}"
+        return f"<Category {self.name}>"
 
 
 class User(UserMixin, db.Model):
@@ -68,15 +68,48 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(500), nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    date = db.Column(db.Integer, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    order_id = db.relationship('Order', backref='user')
 
     def __repr__(self):
         return f"<User {self.id} - {self.first_name} {self.last_name}>"
 
 
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    address = db.Column(db.String(250))
+    postal_code = db.Column(db.String(20))
+    city = db.Column(db.String(100))
+    created = db.Column(db.DateTime, default=datetime.utcnow())
+    paid = db.Column(db.Boolean, default=False)
+    stripe_id = db.Column(db.String(250))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    order_item_id = db.relationship('OrderItem', backref='order')
+
+    def __repr__(self):
+        return f'<Order {self.id}>'
+
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    price = db.Column(db.Integer)
+    quantity = db.Column(db.Integer, default=1)
+
+    def __repr__(self):
+        return f'<OrderItem {self.id}>'
+
+    def get_cost(self):
+        return round(self.price / 100, 2) * self.quantity
+
+
 @login_manager.user_loader
 def user_loader(user_id):
     return User.query.get(user_id)
+
+
+login_manager.login_view = 'login'
 
 
 # Context processors
@@ -88,7 +121,7 @@ def inject_sidebar():
 @app.context_processor
 def inject_cart_total_quantity():
     try:
-        total_quantity = sum(item['quantity'] for item in session['cart'].values())
+        total_quantity = sum(item['quantity'] for item in Cart(session))
         return dict(total_quantity=total_quantity)
     except:
         return dict(total_quantity=0)
@@ -134,6 +167,14 @@ class CartAddProductForm(FlaskForm):
     quantity = SelectField(coerce=int, validators=[InputRequired(), NumberRange(min=1)],
                            choices=[('1', 1), ('2', 2), ('3', 3), ('4', 4), ('5', 5)])
     submit = SubmitField('Add to cart')
+
+
+class OrderForm(FlaskForm):
+    address = StringField("Address: ", validators=[DataRequired()])
+    postal_code = StringField("Postal code: ", validators=[DataRequired()])
+    city = StringField("City: ", validators=[DataRequired()])
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    submit = SubmitField("Create order")
 
 
 # Views
@@ -377,6 +418,47 @@ def cart_detail():
     cart = Cart(session)
     form = ProductForm()
     return render_template('store/cart_detail.html', cart=cart, form=form)
+
+
+@app.route('/order/create/', methods=["POST", "GET"])
+@login_required
+def order_create():
+    form = OrderForm()
+    cart = Cart(session)
+    db.session.rollback()
+    if request.method == "POST":
+        try:
+            order = Order(address=form.address.data,
+                          postal_code=form.postal_code.data,
+                          city=form.city.data,
+                          user_id=current_user.id)
+            db.session.add(order)
+            db.session.commit()
+
+            for item in cart:
+                order_item = OrderItem(order_id=order.id,
+                                       product_id=item['product'].id,
+                                       price=item['price'],
+                                       quantity=item['quantity'])
+                db.session.add(order_item)
+                db.session.commit()
+
+            cart.clear()
+            return redirect(url_for('order_created'))
+
+        except Exception as e:
+            db.session.rollback()
+            print(e)
+
+    return render_template('order/order_create.html', form=form, cart=cart)
+
+
+@app.route('/order/created/')
+@login_required
+def order_created():
+    order = Order.query.filter(Order.user_id == current_user.id).order_by(Order.id.desc()).first()
+    # order = Order.query.get_or_404(pk)
+    return render_template('order/order_created.html', order=order)
 
 
 if __name__ == '__main__':
