@@ -275,13 +275,16 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
+    anonymous_session = session.copy()
+
     form = LoginForm()
     if form.validate_on_submit():
         try:
-            user = User.query.filter_by(email=form.email.data).one()
+            user = User.query.filter_by(email=form.email.data).first()
             if user and check_password_hash(user.password, form.password.data):
                 rm = form.remember.data
                 login_user(user, remember=rm)
+                session.update(anonymous_session)
                 flash("Logged in successfully")
                 return redirect(request.args.get('next') or url_for('dashboard'))
             else:
