@@ -22,6 +22,7 @@ app.config['SECRET_KEY'] = 'DEVELOPMENT'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'store.db')
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static\\images\\')
 login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 db = SQLAlchemy(app)
 CART_SESSION_ID = 'cart'
 
@@ -107,9 +108,6 @@ class OrderItem(db.Model):
 @login_manager.user_loader
 def user_loader(user_id):
     return User.query.get(user_id)
-
-
-login_manager.login_view = 'login'
 
 
 # Context processors
@@ -201,7 +199,7 @@ def add_product():
     form = ProductForm()
     if form.validate_on_submit():
         try:
-            if request.files['picture'].filename:
+            if request.files['picture'].filename != '':
                 loaded_picture_name = secure_filename(request.files['picture'].filename)
                 picture_name_to_save = str(uuid.uuid1()) + "_" + loaded_picture_name
                 form.picture.data.save(os.path.join(app.config['UPLOAD_FOLDER'], picture_name_to_save))
