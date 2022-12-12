@@ -71,6 +71,7 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     order_id = db.relationship('Order', backref='user')
+    profile_picture = db.Column(db.String, nullable=True)
 
     def __repr__(self):
         return f"<User {self.id} - {self.first_name} {self.last_name}>"
@@ -133,6 +134,7 @@ class RegisterForm(FlaskForm):
     password1 = PasswordField("Password: ", validators=[DataRequired(), Length(min=4, max=100)])
     password2 = PasswordField("Confirm password: ",
                               validators=[DataRequired(), EqualTo('password1', message='Passwords do not match.')])
+    profile_picture = FileField("Profile picture'")
     submit = SubmitField("Register")
 
 
@@ -231,9 +233,10 @@ def add_category():
             category = Category(name=form.name.data)
             db.session.add(category)
             db.session.commit()
-            flash('Category added successfully!')
+            flash('Category added successfully!', category='success')
             return render_template('store/add_category.html')
         except Exception as e:
+            flash('Oops! Something goes wrong!', category='danger')
             db.session.rollback()
             print(e)
 
@@ -283,12 +286,12 @@ def login():
                 rm = form.remember.data
                 login_user(user, remember=rm)
                 session.update(anonymous_session)
-                flash("Logged in successfully")
+                flash("Logged in successfully", category='success')
                 return redirect(request.args.get('next') or url_for('dashboard'))
             else:
-                flash('Incorrect username and/or password entered', category='error')
+                flash('Incorrect username and/or password entered', category='danger')
         except NoResultFound:
-            flash('Incorrect username and/or password entered', category='error')
+            flash('Incorrect username and/or password entered', category='danger')
 
     return render_template('auth/login.html', title='Authorization', form=form)
 
@@ -297,8 +300,8 @@ def login():
 @login_required
 def logout():
     """Logout the current user."""
-    logout_user()
     session.clear()
+    logout_user()
     flash('Logged out successfully', category='success')
     return redirect(url_for('login'))
 
@@ -306,22 +309,31 @@ def logout():
 @app.route('/dashboard', methods=["GET", "POST"])
 @login_required
 def dashboard():
+    db.session.rollback()
     form = RegisterForm()
     user_id = current_user.id
     user_to_update = User.query.get_or_404(user_id)
     if request.method == 'POST':
+
+        if request.files['profile_picture'].filename != '' and user_to_update.profile_picture:
+            loaded_picture_name = secure_filename(request.files['profile_picture'].filename)
+            picture_name_to_save = str(uuid.uuid1()) + "_" + loaded_picture_name
+            form.profile_picture.data.save(os.path.join(app.config['UPLOAD_FOLDER'], picture_name_to_save))
+            user_to_update.profile_picture = picture_name_to_save
+
         user_to_update.first_name = form.first_name.data
         user_to_update.last_name = form.last_name.data
         user_to_update.email = form.email.data
+
         try:
             db.session.commit()
-            flash('User updated successfully')
+            flash('User updated successfully', category='success')
             return render_template('auth/dashboard.html',
                                    form=form,
                                    user_to_update=user_to_update)
         except Exception as e:
             print(e)
-            flash('Error! Looks like there was a problem... try again!')
+            flash('Error! Looks like there was a problem... try again!', category='danger')
             return render_template('auth/dashboard.html',
                                    form=form,
                                    user_to_update=user_to_update)

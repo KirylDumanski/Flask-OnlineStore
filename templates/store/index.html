@@ -4,9 +4,6 @@
 
 {%block content%}
 <div class="container">
-  {%for category, message in get_flashed_messages(True)%}
-  <div class="flash {{category}}">{{message}}</div>
-  {%endfor%}
   {%if empty_query%}
   <h3>No products found for the specified category. Go to <a href="{{url_for('index')}}">main page</a></h3>
   {%endif%}

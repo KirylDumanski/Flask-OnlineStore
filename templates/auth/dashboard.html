@@ -5,26 +5,34 @@
 
 {%block content%}
 <div class="container col-10">
-  {%for category, message in get_flashed_messages(True)%}
-  <div class="alert alert-success" role="alert">
-    {{message}}
-  </div>
-  {%endfor%}
   <h2>Dashboard</h2>
   <br>
-
   <div class="card">
     <div class="card-header">{{current_user.first_name}} {{current_user.last_name}}</div>
     <div class="card-body">
-      <h6 class="card-title"><u>Welcome to your Dashboard</u></h6>
       <p class="card-text">
-        <strong>First name: </strong>{{current_user.first_name}}<br>
-        <strong>Last name: </strong>{{current_user.last_name}}<br>
-        <strong>User ID: </strong>{{current_user.id}}<br>
-        <strong>Email: </strong>{{current_user.email}}<br>
-        <strong>Date join: </strong>{{current_user.date}}<br>
+      <div class="container">
+        <div class="row">
+          <div class="col-8">
+            <strong>First name: </strong>{{current_user.first_name}}<br>
+            <strong>Last name: </strong>{{current_user.last_name}}<br>
+            <strong>User ID: </strong>{{current_user.id}}<br>
+            <strong>Email: </strong>{{current_user.email}}<br>
+            <strong>Date join: </strong>{{current_user.date}}<br>
+          </div>
+          <div class="col-4">
+            {%if current_user.profile_picture%}
+              <img src="{{url_for('static', filename='images')}}/{{current_user.profile_picture}}" width="150" height="150" align="right">
+            {%else%}
+              <img src="{{url_for('static', filename='placeholder/default-user-icon.jpg')}}" width="150" align="right">
+            {%endif%}
+          </div>
+        </div>
+        <a href="{{url_for('logout')}}" class="btn btn-secondary btn-sm">Logout</a>
+      </div>
+
       </p>
-      <a href="{{url_for('logout')}}" class="btn btn-secondary btn-sm">Logout</a>
+
     </div>
   </div>
 
@@ -34,7 +42,7 @@
     <div class="card-header">Update Profile</div>
     <div class="card-body">
       <p class="card-text">
-      <form action="{{url_for('dashboard')}}" method="POST">
+      <form action="{{url_for('dashboard')}}" method="POST" enctype="multipart/form-data">
         {{form.hidden_tag()}}
         {{form.first_name.label(class_="form-label")}}
         {{form.first_name(class_="form-control", value=user_to_update.first_name)}}
@@ -44,6 +52,8 @@
         <br>
         {{form.email.label(class_="form-label")}}
         {{form.email(class_="form-control", value=user_to_update.email)}}
+        <br>
+        {{form.profile_picture(class_="form-control", value=user_to_update.profile_picture)}}
         <br>
         {{form.submit(class="btn btn-primary btn-sm", value="Submit")}}
       </form>

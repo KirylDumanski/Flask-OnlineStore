@@ -30,6 +30,11 @@
         {%include 'includes/sidebar.html'%}
       </div>
       <div class="col-9">
+        {%for category, message in get_flashed_messages(True)%}
+        <div class="alert alert-{{category}}" role="alert" style="margin-left: 40px;">
+          {{message}}
+        </div>
+        {%endfor%}
         {% block content %}
         {% endblock content %}
       </div>
