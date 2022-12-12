@@ -59,7 +59,7 @@ class Category(db.Model):
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        return f"<Category {self.name}>"
+        return f"{self.name}"
 
 
 class User(UserMixin, db.Model):
@@ -121,7 +121,7 @@ def inject_sidebar():
 @app.context_processor
 def inject_cart_total_quantity():
     try:
-        total_quantity = sum(item['quantity'] for item in Cart(session))
+        total_quantity = sum(item['quantity'] for item in session['cart'].values())
         return dict(total_quantity=total_quantity)
     except:
         return dict(total_quantity=0)
@@ -297,6 +297,7 @@ def login():
 def logout():
     """Logout the current user."""
     logout_user()
+    session.clear()
     flash('Logged out successfully', category='success')
     return redirect(url_for('login'))
 
@@ -391,12 +392,11 @@ class Cart:
         self.session.modified = True
 
 
-@app.route('/cart/add/', methods=['POST'])
-def cart_add():
+@app.route('/cart/add/<int:pk>', methods=['POST'])
+def cart_add(pk):
     if request.method == 'POST':
         cart = Cart(session)
-        product_id = request.form['product_id']
-        product = Product.query.get_or_404(int(product_id))
+        product = Product.query.get_or_404(pk)
         cart.add(product=product,
                  quantity=int(request.form['quantity']),
                  update_quantity=bool(request.form['update_quantity']))

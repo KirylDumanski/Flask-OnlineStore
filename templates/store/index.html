@@ -34,9 +34,8 @@
           </div>
         </div>
         <br>
-        <form action="{{url_for('cart_add')}}" method="post">
+        <form action="{{url_for('cart_add', pk=product.id)}}" method="post">
           {{form.hidden_tag()}}
-          <input type="hidden" name="product_id" value={{product.id}}>
           <input type="hidden" name="update_quantity" value="">
           {{form.quantity}}
           {{form.submit(class="btn btn-primary btn-sm")}}
