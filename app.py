@@ -177,6 +177,68 @@ class OrderForm(FlaskForm):
     submit = SubmitField("Create order")
 
 
+# Cart class
+class Cart:
+    def __init__(self, session):
+        self.session = session
+        cart = session.get(CART_SESSION_ID)
+        if not cart:
+            self.session[CART_SESSION_ID] = {}
+            cart = self.session[CART_SESSION_ID]
+        self.cart = cart
+
+    def add(self, product: Product, quantity=1, update_quantity=False):
+        product_id = str(product.id)
+
+        if product_id not in self.cart:
+            self.cart[product_id] = {'quantity': 0,
+                                     'price': product.price}
+
+        if update_quantity:
+            self.cart[product_id]['quantity'] = quantity
+        else:
+            self.cart[product_id]['quantity'] += quantity
+
+        self.save()
+
+    def save(self):
+        self.session.modified = True
+
+    def remove(self, product: Product):
+        product_id = str(product.id)
+        if product_id in self.cart:
+            del self.cart[product_id]
+            self.save()
+
+    def __iter__(self):
+        product_ids = list(map(int, self.cart.keys()))
+
+        products = Product.query.filter(Product.id.in_(product_ids))
+
+        for product in products:
+            self.cart[str(product.id)]['product'] = product
+
+        for item in self.cart.values():
+            item['total_price'] = round(int(item['price']) / 100 * int(item['quantity']), 2)  # in cents
+            yield item
+
+    def __len__(self):
+        """Counting all items in the cart."""
+        try:
+            return sum(item['quantity'] for item in self.cart.values())
+        except AttributeError:
+            return 0
+
+    def get_total_price(self):
+        """Calculate the cost of items in the shopping cart."""
+        return round(sum(int(item['price']) / 100 * int(item['quantity']) for item in self.cart.values()), 2)
+
+    def clear(self):
+        """ Delete cart from session"""
+        del self.session[CART_SESSION_ID]
+        self.session.modified = True
+
+
 # Views
 @app.route('/category/<string:category_slug>')
 @app.route('/')
@@ -184,13 +246,19 @@ def index(category_slug=None):
     products = Product.query.filter(Product.active == 1)
     cart_add_form = CartAddProductForm()
     if category_slug:
-        try:
-            products = Product.query.filter(Product.active == 1).join(Category).filter(Category.slug == category_slug)
-            if products.first():
-                return render_template('store/index.html', products=products, category=products.first().category.name)
-            return render_template('store/index.html', empty_query=True)
-        except Exception as e:
-            print(e)
+        if category_slug == 'new_arrivals':
+            products = Product.query.order_by(Product.id.desc()).limit(5)
+        else:
+            try:
+                products = Product.query.filter(Product.active == 1).join(Category).filter(
+                    Category.slug == category_slug)
+                if products.first():
+                    return render_template('store/index.html', products=products,
+                                           category=products.first().category.name)
+                return render_template('store/index.html', empty_query=True)
+            except Exception as e:
+                print(e)
+
     return render_template('store/index.html',
                            products=products,
                            form=cart_add_form)
@@ -216,9 +284,10 @@ def add_product():
                               picture=picture_name_to_save)
             db.session.add(product)
             db.session.commit()
-            flash('Product added successfully!')
+            flash('Product added successfully!', category='success')
             return render_template('store/product/add_product.html')
         except Exception as e:
+            flash('Oops! Something goes wrong!', category='danger')
             db.session.rollback()
             print(e)
 
@@ -344,67 +413,6 @@ def dashboard():
                            user_id=user_id)
 
 
-class Cart:
-    def __init__(self, session):
-        self.session = session
-        cart = session.get(CART_SESSION_ID)
-        if not cart:
-            self.session[CART_SESSION_ID] = {}
-            cart = self.session[CART_SESSION_ID]
-        self.cart = cart
-
-    def add(self, product: Product, quantity=1, update_quantity=False):
-        product_id = str(product.id)
-
-        if product_id not in self.cart:
-            self.cart[product_id] = {'quantity': 0,
-                                     'price': product.price}
-
-        if update_quantity:
-            self.cart[product_id]['quantity'] = quantity
-        else:
-            self.cart[product_id]['quantity'] += quantity
-
-        self.save()
-
-    def save(self):
-        self.session.modified = True
-
-    def remove(self, product: Product):
-        product_id = str(product.id)
-        if product_id in self.cart:
-            del self.cart[product_id]
-            self.save()
-
-    def __iter__(self):
-        product_ids = list(map(int, self.cart.keys()))
-
-        products = Product.query.filter(Product.id.in_(product_ids))
-
-        for product in products:
-            self.cart[str(product.id)]['product'] = product
-
-        for item in self.cart.values():
-            item['total_price'] = round(int(item['price']) / 100 * int(item['quantity']), 2)  # in cents
-            yield item
-
-    def __len__(self):
-        """Counting all items in the cart."""
-        try:
-            return sum(item['quantity'] for item in self.cart.values())
-        except AttributeError:
-            return 0
-
-    def get_total_price(self):
-        """Calculate the cost of items in the shopping cart."""
-        return round(sum(int(item['price']) / 100 * int(item['quantity']) for item in self.cart.values()), 2)
-
-    def clear(self):
-        """ Delete cart from session"""
-        del self.session[CART_SESSION_ID]
-        self.session.modified = True
-
-
 @app.route('/cart/add/<int:pk>', methods=['POST'])
 def cart_add(pk):
     if request.method == 'POST':
@@ -470,7 +478,6 @@ def order_create():
 @login_required
 def order_created():
     order = Order.query.filter(Order.user_id == current_user.id).order_by(Order.id.desc()).first()
-    # order = Order.query.get_or_404(pk)
     return render_template('order/order_created.html', order=order)
 
 

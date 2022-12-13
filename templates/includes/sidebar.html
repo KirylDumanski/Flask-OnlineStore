@@ -3,8 +3,13 @@
   <hr>
   <ul class="nav nav-pills flex-column mb-auto">
     <li class="nav-item"><a href="{{url_for('index')}}" class="nav-link link-dark">All products</a></li>
+    <li class="nav-item">
+      <a href="{{url_for('index', category_slug='new_arrivals')}}" class="nav-link link-dark">New arrivals</a>
+    </li>
+    <li><hr class="dropdown-divider"></li>
     {%for category in sidebar_categories%}
-    <li><a href="{{url_for('index', category_slug=category.slug)}}" class="nav-link link-dark">{{category.name}}</a></li>
+    <li><a href="{{url_for('index', category_slug=category.slug)}}" class="nav-link link-dark">{{category.name}}</a>
+    </li>
     {%endfor%}
   </ul>
   <hr>
