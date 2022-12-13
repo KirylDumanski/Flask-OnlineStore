@@ -2,6 +2,7 @@ import os
 import uuid
 from datetime import datetime
 
+import flask_login
 from flask import Flask, render_template, flash, request, redirect, url_for, session
 from flask_login import UserMixin, LoginManager, current_user, login_user, login_required, logout_user
 from flask_sqlalchemy import SQLAlchemy
@@ -134,7 +135,7 @@ class RegisterForm(FlaskForm):
     password1 = PasswordField("Password: ", validators=[DataRequired(), Length(min=4, max=100)])
     password2 = PasswordField("Confirm password: ",
                               validators=[DataRequired(), EqualTo('password1', message='Passwords do not match.')])
-    profile_picture = FileField("Profile picture'")
+    profile_picture = FileField("Profile picture: ")
     submit = SubmitField("Register")
 
 
@@ -329,13 +330,14 @@ def register():
                         last_name=form.last_name.data)  # type: ignore
             db.session.add(user)
             db.session.commit()
+            flask_login.login_user(user)
             flash("You have successfully registered!", category='success')
             return redirect(url_for('login'))
 
         except Exception as e:
             db.session.rollback()
             print(e)
-            flash("Registration error", category='error')
+            flash("Registration error", category='danger')
 
     return render_template('auth/register.html', title='Register', form=form)
 
@@ -383,8 +385,8 @@ def dashboard():
     user_id = current_user.id
     user_to_update = User.query.get_or_404(user_id)
     if request.method == 'POST':
-
-        if request.files['profile_picture'].filename != '' and user_to_update.profile_picture:
+        if not user_to_update.profile_picture or \
+                (request.files['profile_picture'].filename != '' and user_to_update.profile_picture):
             loaded_picture_name = secure_filename(request.files['profile_picture'].filename)
             picture_name_to_save = str(uuid.uuid1()) + "_" + loaded_picture_name
             form.profile_picture.data.save(os.path.join(app.config['UPLOAD_FOLDER'], picture_name_to_save))
