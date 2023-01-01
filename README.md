@@ -1,7 +1,9 @@
 # Flask Online Store
 
 ## Introduction
-"Flask Online Store" is an application based on Python using the Flask microframework.
+This application based on one of my previous project but only used Flask microframework 
+architecture. The goal was to get acquainted with this microframework and its plugins.
+
 
 ## Technology stack
 - Python 3.8
