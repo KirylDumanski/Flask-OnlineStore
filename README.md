@@ -20,9 +20,6 @@ architecture. The goal was to get acquainted with this microframework and its pl
 
 ## Installation Guide
 1. Clone git repository
-```
-https://github.com/KirylDumanski/Flask-OnlineStore.git
-```
 2. Install a Virtual Environment.
 3. Install the dependencies.
 ```
